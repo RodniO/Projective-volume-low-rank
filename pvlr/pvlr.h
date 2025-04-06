@@ -45,8 +45,8 @@ void pvlr_aca(Matrix const *A, int rows, int cols, int max_rank, int jpmax,
 //
 // Find dominant k-by-k submatrix $\hat A$ and construct $C \hat A^{-1} R$
 // approximation.
-void pvlr_maxvol(Matrix const *A, int M, int N, int rank, IntVector *per1,
-                 IntVector *per2, Matrix *C, Matrix *UR, int maxsteps,
+void pvlr_maxvol(Matrix const *A, int M, int N, int rank, IntVector const *per1,
+                 IntVector const *per2, Matrix *C, Matrix *UR, int maxsteps,
                  int maxswaps, Matrix *CA, bool premaxvol);
 
 void pvlr_maxvol2(Matrix const *A, int M, int N, int rank, IntVector *per1,
@@ -54,8 +54,8 @@ void pvlr_maxvol2(Matrix const *A, int M, int N, int rank, IntVector *per1,
                   int maxswaps, Matrix *CA, bool premaxvol);
 
 void pvlr_maxvol_proj(Matrix const *A, int M, int N, int rank, int k, int l,
-                      IntVector *per1, IntVector *per2, Matrix *C, Matrix *UR,
-                      int maxsteps, int maxswaps,
+                      IntVector const *per1, IntVector const *per2, Matrix *C,
+                      Matrix *UR, int maxsteps, int maxswaps,
                       AccType acc_type = AccType::Double);
 
 } // extern "C"

@@ -1,8 +1,7 @@
 module;
 
-#include <vector>
-#include <cstdio>
 #include <utility>
+#include <vector>
 
 #include "pvlr.h"
 
@@ -55,6 +54,10 @@ public:
         return *this;
     }
 
+    ::Matrix const *get(void) const noexcept {
+        return &data;
+    }
+
     ::Matrix *get(void) noexcept {
         return &data;
     }
@@ -65,14 +68,25 @@ public:
         return {rows, cols};
     }
 
+    static Matrix FromBuffer(double const *data, int rows, int cols) {
+        Matrix mat(rows, cols);
+        pvlr_matrix_from_buffer(&mat.data, data);
+        return mat;
+    }
+
     static Matrix FromBuffer(std::vector<double> const &data, int rows,
                              int cols) {
         if (static_cast<int>(data.size()) != rows * cols) {
             return {};
         }
-        Matrix mat(rows, cols);
-        pvlr_matrix_from_buffer(&mat.data, data.data());
-        return mat;
+        return FromBuffer(data.data(), rows, cols);
+    }
+
+    std::vector<double> ToBuffer(void) const {
+        auto [rows, cols] = GetShape();
+        std::vector<double> buffer(static_cast<size_t>(rows * cols));
+        pvlr_matrix_to_buffer(&data, buffer.data());
+        return buffer;
     }
 };
 
@@ -105,20 +119,18 @@ public:
         return *this;
     }
 
+    ::IntVector const *get(void) const noexcept {
+        return &data;
+    }
+
     ::IntVector *get(void) noexcept {
         return &data;
     }
 
-    size_t size(void) const {
+    size_t size(void) const noexcept {
         int size;
         pvlr_int_vector_shape(&data, &size);
         return static_cast<size_t>(size);
-    }
-
-    std::vector<int> ToBuffer(void) const {
-        std::vector<int> buffer;
-        pvlr_int_vector_to_buffer(&data, buffer.data());
-        return buffer;
     }
 
     static IntVector Iota(int start, int stop, int step = 1) {
@@ -138,11 +150,45 @@ public:
         return FromBuffer(data);
     }
 
-    static IntVector FromBuffer(std::vector<int> const &data) {
-        IntVector vec(static_cast<int>(data.size()));
-        pvlr_int_vector_from_buffer(vec.get(), data.data());
+    static IntVector FromBuffer(int const *data, int size) {
+        IntVector vec(size);
+        pvlr_int_vector_from_buffer(vec.get(), data);
         return vec;
     }
+
+    static IntVector FromBuffer(std::vector<int> const &data) {
+        return FromBuffer(data.data(), static_cast<int>(data.size()));
+    }
+
+    std::vector<int> ToBuffer(void) const {
+        std::vector<int> buffer(size());
+        pvlr_int_vector_to_buffer(&data, buffer.data());
+        return buffer;
+    }
 };
+
+// ACA -- Adaptive Cross-Approximation.
+void ACA(Matrix const &A, int rows, int cols, int max_rank, int jpmax,
+         Matrix &U, Matrix &V, IntVector const &perm, double rho,
+         double rel_err, double rel_err_fro, double abs_err, IntVector &ix,
+         IntVector &jx, int max_steps) {
+    pvlr_aca(A.get(), rows, cols, max_rank, jpmax, U.get(), V.get(), perm.get(),
+             rho, rel_err, rel_err_fro, abs_err, ix.get(), jx.get(), max_steps);
+}
+
+void Maxvol(Matrix const &A, int M, int N, int rank, IntVector const &per1,
+            IntVector const &per2, Matrix &C, Matrix &UR, int maxsteps,
+            int maxswaps, Matrix &CA, bool premaxvol = true) {
+    pvlr_maxvol(A.get(), M, N, rank, per1.get(), per2.get(), C.get(), UR.get(),
+                maxsteps, maxswaps, CA.get(), premaxvol);
+}
+
+void MaxvolProj(Matrix &A, int M, int N, int rank, int k, int l,
+                IntVector const &per1, IntVector const &per2, Matrix &C,
+                Matrix &UR, int maxsteps, int maxswaps,
+                AccType acc_type = AccType::Double) {
+    pvlr_maxvol_proj(A.get(), M, N, rank, k, l, per1.get(), per2.get(), C.get(),
+                     UR.get(), maxsteps, maxswaps, acc_type);
+}
 
 } // namespace pvlr

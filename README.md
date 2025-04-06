@@ -36,3 +36,41 @@ Debug:
 
 debugrun.sh script uses gfortran with debug options to recompile and run everything. Remember to run 'make clean' after debug before running 'make gnu'.
 
+
+## Development
+
+Build specific target with CMake (see `BLA_*` and `LAPACK_*` variables to
+control BLAS/LAPACK library choice).
+
+```bash
+cmake -S . -B build -G 'Ninja Multi-Config'
+cmake --build build --config Release -t extension
+```
+
+Build Fortran and run routine for demo and testing.
+
+```cmake
+cmake --build build --config Release -t main
+build/Release/main
+```
+
+Build Python wheel with `build` package (option `-n` for building non-isolated
+environment).
+
+```bash
+python -m build -vw
+```
+
+Build wheels in isolated environment (publishing or release pipelines).
+
+```bash
+cibuildwheel --print-build-identifier
+cibuildwheel --only cp312-manylinux_x86_64
+ls -l wheelhouse
+```
+
+Install wheel built with `cibuildwheel`.
+
+```bash
+pip install wheelhouse/pvlr-*.whl
+```

@@ -18,6 +18,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     set(CXX_COMPILE_OPTIONS
@@ -52,7 +53,7 @@ target_include_directories(pvlr PRIVATE src)
 
 target_link_libraries(pvlr PUBLIC BLAS::BLAS LAPACK::LAPACK)
 
-add_library(pvlr-cc STATIC)
+add_library(pvlr-cc)
 
 target_sources(pvlr-cc
     PUBLIC FILE_SET CXX_MODULES FILES
@@ -61,9 +62,9 @@ target_sources(pvlr-cc
         pvlr/pvlr.h
 )
 
-target_link_libraries(pvlr-cc PUBLIC pvlr)
-
 target_compile_options(pvlr-cc PRIVATE "${CXX_COMPILE_OPTIONS}")
+
+target_link_libraries(pvlr-cc PUBLIC pvlr)
 
 if (BUILD_TESTS)
     add_executable(main src/Main.f90)
@@ -78,3 +79,5 @@ if (BUILD_TESTS)
 
     target_link_libraries(pvlr_test PRIVATE pvlr-cc)
 endif()
+
+add_subdirectory(pvlr)

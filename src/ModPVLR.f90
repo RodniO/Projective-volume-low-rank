@@ -60,7 +60,7 @@ contains
         if (c_associated(this%ptr)) then
             call c_f_pointer(this%ptr, ptr)
             rows = ptr%n
-            cols = ptr%n
+            cols = ptr%m
         else
             rows = 0
             cols = 0
