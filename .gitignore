@@ -1,0 +1,10 @@
+/.*
+!.gitignore
+
+# Ignore build directories.
+/build
+/dist
+/wheelhouse
+
+# Ignore in-tree Python extension.
+/pvlr/extension.*.so

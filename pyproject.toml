@@ -1,0 +1,58 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "cmake>=4", "ninja"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pvlr"
+version = "0.0.0"
+description = "TODO"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["numpy>=2"]
+
+[project.urls]
+Homepage = "https://github.com/RodniO/Projective-volume-low-rank"
+
+[tool.cibuildwheel]
+build = "cp*-manylinux*"
+build-verbosity = 3
+
+archs = ["x86_64"]
+manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64"
+
+test-skip = "*"
+test-requires = "pytest>=8.2"
+test-command = "pytest {project}"
+
+[tool.cibuildwheel.linux]
+before-all = "yum -y update && yum -y install blas-devel lapack-devel"
+before-test = "yum -y update && yum -y install openblas-devel lapack"
+
+[tool.pytest.ini_options]
+minversion = "8.2"
+addopts = "-ra -q -m 'not slow' --no-header"
+testpaths = ["pvlr"]
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+
+build-dir = "build/{wheel_tag}"
+build.targets = ["extension"]
+
+wheel.exclude = ["*.cc", "*.ccm", "*.h", "CMakeLists.txt"]
+wheel.packages = ["pvlr"]
+wheel.py-api = "cp312"  # Stable ABI for py3.12+.
+
+[tool.scikit-build.cmake.define]
+BUILD_SHARED_LIBS = false
+
+[tool.ruff]
+output-format = "concise"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "LOG", "PYI"]
+ignore = ["I001", "PYI021"]
+preview = true
+
+[tool.ruff.lint.per-file-ignores]
+"*.pyi" = ["E501"]
