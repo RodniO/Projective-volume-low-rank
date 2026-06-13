@@ -481,6 +481,34 @@ Module ModVec
       res = ij(1)
     end function
     
+    function myidmaxratio(n, A, B) Result(res)
+      Integer(4) n
+      Double precision, intent(in) :: A(n), B(n)
+      Integer(4) res
+  
+      Double precision M, x, ab(16)
+      Integer(4) k, kf, ij(1)
+  
+      ij(1) = 1
+      M = A(1)/B(1)
+      do k = 1, n-16, 16
+        ab(:) = A(k:k+15)/B(k:k+15)
+        x = maxval(ab)
+        if (x > M) then
+          ij = maxloc(ab)+k-1
+          M = x
+        end if
+      end do
+      kf = n - k + 1
+      ab(1:kf) = A(k:n)/B(k:n)
+      x = maxval(ab(1:kf))
+      if (x > M) then
+        ij = maxloc(ab(1:kf))+k-1
+        M = x
+      end if
+      res = ij(1)
+    end function
+    
     !Create vector of ones or k-th vector of standard basis
     elemental function evec(n, k) Result(res)
       Integer(4), intent(in) :: n

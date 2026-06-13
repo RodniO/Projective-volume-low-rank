@@ -3080,7 +3080,7 @@ Module ModMtrx
     
     subroutine mtrx_lq(this, r, q)
       Class(Mtrx) :: this
-      Type(Mtrx), intent(out) :: q, r
+      Type(Mtrx), intent(out) :: r, q
       DOUBLE PRECISION, Allocatable :: work(:)
       Type(Mtrx) qd
       Type(Vector) dtau
@@ -3125,12 +3125,12 @@ Module ModMtrx
         if (qt_ == 'N') then
           res%n = q%n
         else
-          res%n = q%m
+          res%n = max(q%m,this%n)
         end if
         res%m = this%m
       else
         if (qt_ == 'N') then
-          res%m = q%m
+          res%m = max(q%m,this%m)
         else
           res%m = q%n
         end if

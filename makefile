@@ -6,7 +6,7 @@ all:	intel
 
 run:	intel_run
 
-compiler_intel = ifort
+compiler_intel = ifx
 opt_intel = -module ./obj_intel -O3 -xHost -no-wrap-margin
 #-static -parallel
 obj_intel = $(addprefix obj_intel/, $(obj))

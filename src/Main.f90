@@ -35,7 +35,7 @@ subroutine init_random_seed()
   allocate(seed(n))
 
   !call system_clock(count=clock)
-  clock = 23
+  clock = 24
 
   seed = clock + 37 * (/ (i - 1, i = 1, n) /)
   call random_seed(put = seed)

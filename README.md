@@ -1,11 +1,15 @@
 # Projective volume low-rank approximation
 
 Hello!
-This repository contains a Fortran code of the methods from
-[1] A.I. Osinsky. Rectangular maximum volume and projective volume search algorithms // arXiv 1809.02334 (Submitted on 7 Sep 2018)
+This repository contains a Fortran code of the cross and column approximation methods from
+[1] A.I. Osinsky. Rectangular maximum volume and projective volume search algorithms // arXiv 1809.02334 (Submitted on 7 Sep 2018),
+[2] A.I, Osinsky. Polynomial time rho-locally maximum volume search. Calcolo 60, 42 (2023)
+and
+[3] A.I. Osinsky, Close to optimal column approximation using a single SVD. Linear Algebra and its Applications, 725, 359-377 (2025),
 
 Also includes matrix completion algorithm based on projective volume from
-[2] O.S. Lebedeva, A.I. Osinsky, S.V. Petrov. Low-Rank Approximation Algorithms for Matrix Completion with Random Sampling // Comput. Math. and Math. Phys. 61, 799–815 (2021).
+[4] O.S. Lebedeva, A.I. Osinsky, S.V. Petrov. Low-Rank Approximation Algorithms for Matrix Completion with Random Sampling // Comput. Math. and Math. Phys. 61, 799–815 (2021).
+and nonnegative matrix approximation based on alternating projections (both utilize cross approximations to be faster).
 
 Module ModAppr contains subroutines for low-rank approximations. Module ModRecon contains subroutines for matrix completion (reconstruction). There are also vector (ModVec) and matrix (ModMtrx) modules, which can be quite useful.
 
@@ -21,7 +25,7 @@ or
 
 make run
 
-(Requires ifort and mkl)
+(Requires intel fortran and mkl)
 
 Structure:
 
@@ -35,4 +39,3 @@ Code uses 'allocatable' arrays, which are usually put in stack. Therefore, for l
 Debug:
 
 debugrun.sh script uses gfortran with debug options to recompile and run everything. Remember to run 'make clean' after debug before running 'make gnu'.
-

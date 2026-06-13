@@ -876,6 +876,125 @@ subroutine TruncateCUR(C, UR, new_rank, err_bound, trunc_err)
   UR = V%multq(Q2, tau2, 'R', 'U')
 end
 
+!From the paper "Close to optimal column approximation in a single SVD"
+!Generalised for regularized low-rank input
+!If A has rank=rank and regularization is nonzero, selects a submatrix with low Frobenius norm pseudoinverse
+subroutine BestCols(A, per, rank, reg)
+  Type(Mtrx) :: A !Input matrix
+  Type(IntVec) :: per !Permutation of columns
+  Integer(4), intent(in) :: rank !Desired rank
+  Double precision, intent(in), optional :: reg !Regularization: expected Frobenius norm error in all columns
+
+  Double precision :: alpha !Regularization
+  Type(Mtrx) L !Lower triangular
+  Type(Mtrx) Q !Q-factor
+  Type(Vector) tau !Information about Q
+  Type(Mtrx) U, V !SVD factors
+  Type(Vector) s !Singular values
+  Type(Mtrx) U2, E !Error matrix
+  
+  call A%halflq(L, tau, Q)
+  call L%svd(V,s,U)
+  
+  U2 = U%subrows(rank)
+  V = U2%multq(Q, tau, 'R', 'U')
+  
+  U2 = s%subarray(s%n, rank+1) .dot. U%subrows(U%n, rank+1)
+  E = U2%multq(Q, tau, 'R', 'U')
+  
+  if (present(reg)) then
+    alpha = reg/sqrt(sum(s%d(rank+1:)**2)*(A%m-rank))
+  else
+    alpha = 0.0d0
+  end if
+  
+  call BestColsOrth(V, E, per, alpha)
+end
+
+subroutine BestColsOrth(V, E, per, alpha_in, reg)
+  Type(Mtrx) :: V !Input rows
+  Type(Mtrx) :: E !Error matrix orthogonal to V; assumed to be larger than rank
+  Type(IntVec) :: per !Permutation of columns
+  Double precision, intent(in), optional :: alpha_in !Additional regularization
+  Double precision, intent(in), optional :: reg !Regularization: expected Frobenius norm error in all columns
+
+  Double precision :: alpha !Regularization
+  Integer(4) rank !Desired rank
+  Type(Vector) tau !Information about Q
+  Double precision, allocatable :: work(:)
+  Double precision beta
+  Type(Vector) deltaw, deltae, lvec, evec, wvec
+  
+  Integer(4) i, j
+  
+  if (present(alpha_in)) then
+    alpha = alpha_in
+  else
+    alpha = 0.0d0
+  end if
+  if (present(reg)) then
+    alpha = alpha + reg/sqrt(sum(E%d**2)*E%m)
+  end if
+  
+  rank = V%n
+  
+  Allocate(work(V%m))
+  call wvec%init(rank)
+  
+  lvec = sum(V%d**2, dim = 1)
+  evec = sum(E%d**2, dim = 1) + alpha**2
+  
+  !If we want C \hat V^-1 V, then it can be faster to compute \hat V^-1 V instead of current V=QR or C ([S \hat V; alpha I])^+ SV.
+  do i = 1, rank
+    if (i > 2) then
+      call dcopy(i-2, V%d(i-1,1), rank, wvec%d, 1)
+      call dtrsv('U', 'T', 'N', i-2, V%d, rank, wvec%d, 1)
+    end if
+    if (alpha > 0) then
+      if (i == 1) then
+        call deltaw%init(V%m)
+      else
+        if (i > 2) then
+          call dgemv('T', i-2, V%m-i+1, 1.0d0, V%d(1,i), rank, wvec%d, 1, 0.0d0, deltaw%d, 1)
+        end if
+        beta = alpha**2/V%d(i-1,i-1)**2
+        evec%d(i:) = evec%d(i:) + beta*deltaw%d(1:V%m-i+1)**2
+        !First term is introduced later
+        !evec%d(i:) = evec%d(i:) + beta*(V%d(i-1,i:) - deltaw%d(1:V%m-i+1))**2 !Are orthogonal, so can be added independently
+      end if
+    end if
+    if (i > 1) then
+      lvec%d(i:) = lvec%d(i:) - V%d(i-1,i:)**2
+        
+      deltae = E%subcol(i-1)
+      if (i > 2) then
+        deltae = deltae - E%subcols(i-2) * wvec%subarray(i-2)
+      end if
+      beta = (sum(deltae%d(:)**2) + alpha**2)/V%d(i-1,i-1)**2
+      evec%d(i:) = evec%d(i:) + beta*V%d(i-1,i:)**2
+    end if
+    
+    j = myidmaxratio(V%m-i+1, lvec%d(i:), evec%d(i:))
+    j = j + i - 1
+    
+    call V%swap(2, i,j)
+    call E%swap(2, i,j)
+    call per%swap(i,j)
+    call lvec%swap(i,j)
+    call evec%swap(i,j)
+  
+    if (i < rank) then
+      call dlarfg(rank-i+1, V%d(i,i), V%d(i+1,i), 1, tau)
+
+      beta = V%d(i,i)
+      V%d(i,i) = 1.0d0
+      call dlarf('L', rank-i+1, V%m-i, V%d(i,i), 1, tau, V%d(i,i+1), rank, work)
+      V%d(i,i) = beta
+    end if
+  end do
+
+end
+
 !Alternating projections for nonnegative matrix approximation
 !with truncated SVD replaced by CUR
 subroutine PositCUR(Afun, param, M, N, rank, k2, k3, minelem, maxelem, epsmult, C, AR, verbose, acc_type)

@@ -11,7 +11,7 @@ end
 
 subroutine ExampleA()
   USE ModAppr
-  Type(Mtrx) U, V, A, C, CA, AR, E, Ahat, A1, AB, ABin!, R, Q
+  Type(Mtrx) U, V, A, C, CA, AR, E, Ahat, A1, AB, ABin, R, Q
   Type(IntVec) per1, per2, per3, peri
   Type(Vector) cin, S
   Integer(4) n, k, maxsteps, maxswaps, swapsmade, i
@@ -154,7 +154,7 @@ subroutine ExampleA()
   print *, ''
   
   !RRQR with DOMINANT_R
-  print *, 'Finally, we construct Strong Rank Revealing QR with Dominant-R'
+  print *, 'Now we construct Strong Rank Revealing QR with Dominant-R'
   !Let's reinitialize column permutations
   call per2%perm(n)
   !and rows
@@ -200,4 +200,106 @@ subroutine ExampleA()
   !Uncomment to construct incomplete QR instead of CC^+A.
   !E = A - Q*AR
   print *, 'DOMINANT-R RRQR error:', E%fnorm()
+  
+  !Quasioptimal approximation
+  print *, 'Finally, we construct close to optimal column approximation'
+  print *, 'First, let us use SVD vectors (given in advance)'
+  print *, 'We will now generate A with exponentially decreasing singular values 2^-k'
+  do i = 1, n
+    S%d(i) = 2.0d0**(-i)
+  end do
+  A = U*(S .dot. V)
+  print *, 'SVD error:', sqrt(sum(S%d(k+1:)**2))
+  print *, ''
+  !Since SVD is known, we use the version, which is given A - AV^TV in order to avoid SVD calculation
+  E = S%subarray(n, k+1) .dot. V%subrows(n, k+1)
+  !Select first k right singular vectors
+  V = V%subrows(k)
+  !Let's reinitialize column permutations
+  call per2%perm(n)
+  
+  time = dsecnd()
+  
+  !To use with arbitrary V, calculate E as A - A*V^T*V directly
+  !This only selects the columns, which are written in per2
+  call BestColsOrth(V, E, per2)
+  
+  time = dsecnd() - time
+  
+  print *, 'Column selection time:', time
+  print *, ''
+  print *, 'Now compute the error of approximation with the selected columns'
+  C = Acols(Aelem,n,k,peri,per2,A)
+  call C%qr(Q,R)
+  E = A - Q*(Q .Td. A)
+  print *, 'Column approximation error:', E%fnorm()
+  print *, ''
+  print *, 'Now let us select rows for C \hat A^-1 R approximation'
+  
+  Q = .T.Q
+  E = .T.E
+  call per1%perm(n)
+  
+  time = dsecnd()
+  
+  !This only selects the rows, which are written in per1
+  !Q and E are reused from column approximation
+  call BestColsOrth(Q, E, per1)
+  
+  time = dsecnd() - time
+  
+  print *, 'Row selection time:', time
+  print *, ''
+  print *, 'Now compute the error of the skeleton approximation'
+  AR = Arows(Aelem,k,n,per1,peri,A)
+  !Select a submatrix
+  Ahat = Arows(Aelem,k,k,per1,per2,A)
+  !This can be done a little faster, if the resulting Q from BestColsOrth is saved
+  AR = Ahat .Id. AR
+  E = A - C*AR
+  print *, 'Skeleton approximation error:', E%fnorm()
+  print *, ''
+  
+  print *, 'Now let us show how to reach almost the same in O(Nr^2) without SVD'
+  print *, 'I will use ACA as an initial approximation: it can be replaced with projective volume for better accuracy'
+  
+  call per1%perm(n)
+  call per2%perm(n)
+  call per3%perm(n)
+  
+  !Let's calculate the time
+  time = dsecnd()
+  
+  call ACA(Aelem, A, n, n, k+10, 1, C, AR, per1, iNs_ = per2, jNs_ = per3)
+  AR = .T.AR
+  
+  call AR%lq(R,Q)
+  Ahat = .T.(C*R)
+  call per1%perm(n)
+  !Typical error of ACA is usually no more than 10 times larger than SVD error (Frobenius norm should be used instead of spectral)
+  !Here I substitute the bound, in practice it should be estimated (see inside ACA for ways to do that)
+  !Worst-case scenario is spectral norm of error * sqrt(n-k-5), but in practice Frobenius norm should be enough
+  !However, for some reason, zero regularization works even better; I will leave the equation however
+  call BestCols(Ahat, per1, k, 0*10*2.0d0**(-(k+11)))
+  CA = Arows(Aelem, k, N, per1, peri, A)
+  
+  time = dsecnd() - time
+  print *, 'ACA-based rows time:', time
+  E = A - (C * (AR .dI. CA)) * CA
+  print *, 'ACA-based row error:', E%fnorm()
+  
+  time = dsecnd()
+  
+  call CA%lq(R,V)
+  AR = AR - ((AR .dT. V) * V)
+  call C%qr(Q,R)
+  Ahat = R*AR
+  call per2%perm(n)
+  call BestColsOrth(V, Ahat, per2, reg=0*10*2.0d0**(-(k+11)))
+  Ahat = Acols(Aelem, k, k, peri, per2, CA)
+  C = Acols(Aelem, N, k, peri, per2, A)
+  time = dsecnd() - time
+  print *, 'ACA-based CUR time:', time
+  E = A - C*(Ahat .Id. CA)
+  print *, 'ACA-based CUR error:', E%fnorm()
 end
